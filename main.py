@@ -1,4 +1,5 @@
 import sys, requests
+from pyncm import apis
 sys.path.append('../..')
 import go
 
@@ -20,19 +21,33 @@ def play_music(meta_data):
     
     if ' ' in message:
         message = message.split(' ')
-        page = message[1]
-        song = message[0]
+        i = 1
+        try:
+            page = int(message[-1])
+        except Exception as e:
+            page = 1
+            i = 0
+        if page != message[1]:
+            num = len(message)-i
+            songList = message[0:num]
+            song = ''
+            for i in songList:
+                song += i+' '
+        else:
+            song = message[0]
     else:
         page = 1
         song = message
-    data = requests.get(meta_data.get('botSettings').get('musicApi')+'search?keywords='+str(song)+'&limit='+str(meta_data.get('botSettings').get('musicApiLimit'))+'&offset='+str((int(page)-1)*meta_data.get('botSettings').get('musicApiLimit'))).json().get('result').get('songs')
+    
+    data = apis.cloudsearch.GetSearchResult(keyword=song, limit=meta_data.get('botSettings').get('musicApiLimit'), offset=(page-1)*meta_data.get('botSettings').get('musicApiLimit'))
+    go.send(meta_data, 'limit={0}, offset={1}'.format(meta_data.get('botSettings').get('musicApiLimit'), (page-1)*meta_data.get('botSettings').get('musicApiLimit')))
     
     message = '[CQ:face,id=189] 歌曲：'+str(song)+' 的搜索结果'
-    for i in data:
+    for i in data.get('songs'):
         message += '\n[CQ:face,id=161] 歌曲ID：'+str(i.get('id'))+'\n     歌曲名：'+str(i.get('name'))+'\n     作者：'
-        for l in i.get('artists'):
+        for l in i.get('ar'):
             message += str(l.get('name'))+'、'
-    message += '\n\n查看下一页请发送“搜歌 '+str(song)+' '+str(int(page)+1)+'”'
+    message += '\n\n查看下一页请发送“搜歌 '+str(song)+' '+str(page+1)+'”'
     go.send(meta_data, message)
     
 def get_music_url(meta_data):
